@@ -223,6 +223,10 @@ internal func == (lhs: NumericInstruction.Binary, rhs: NumericInstruction.Binary
         return lhs == rhs
     case (.mul(let lhs), .mul(let rhs)):
         return lhs == rhs
+    case (.eq(let lhs), .eq(let rhs)):
+        return lhs == rhs
+    case (.ne(let lhs), .ne(let rhs)):
+        return lhs == rhs
     case (.divS(let lhs), .divS(let rhs)):
         return lhs == rhs
     case (.divU(let lhs), .divU(let rhs)):
@@ -247,18 +251,6 @@ internal func == (lhs: NumericInstruction.Binary, rhs: NumericInstruction.Binary
         return lhs == rhs
     case (.rotr(let lhs), .rotr(let rhs)):
         return lhs == rhs
-    case (.div(let lhs), .div(let rhs)):
-        return lhs == rhs
-    case (.min(let lhs), .min(let rhs)):
-        return lhs == rhs
-    case (.max(let lhs), .max(let rhs)):
-        return lhs == rhs
-    case (.copysign(let lhs), .copysign(let rhs)):
-        return lhs == rhs
-    case (.eq(let lhs), .eq(let rhs)):
-        return lhs == rhs
-    case (.ne(let lhs), .ne(let rhs)):
-        return lhs == rhs
     case (.ltS(let lhs), .ltS(let rhs)):
         return lhs == rhs
     case (.ltU(let lhs), .ltU(let rhs)):
@@ -274,6 +266,14 @@ internal func == (lhs: NumericInstruction.Binary, rhs: NumericInstruction.Binary
     case (.geS(let lhs), .geS(let rhs)):
         return lhs == rhs
     case (.geU(let lhs), .geU(let rhs)):
+        return lhs == rhs
+    case (.div(let lhs), .div(let rhs)):
+        return lhs == rhs
+    case (.min(let lhs), .min(let rhs)):
+        return lhs == rhs
+    case (.max(let lhs), .max(let rhs)):
+        return lhs == rhs
+    case (.copysign(let lhs), .copysign(let rhs)):
         return lhs == rhs
     case (.lt(let lhs), .lt(let rhs)):
         return lhs == rhs
@@ -351,6 +351,8 @@ internal func == (lhs: NumericInstruction.Unary, rhs: NumericInstruction.Unary) 
         return lhs == rhs
     case (.popcnt(let lhs), .popcnt(let rhs)):
         return lhs == rhs
+    case (.eqz(let lhs), .eqz(let rhs)):
+        return lhs == rhs
     case (.abs(let lhs), .abs(let rhs)):
         return lhs == rhs
     case (.neg(let lhs), .neg(let rhs)):
@@ -364,8 +366,6 @@ internal func == (lhs: NumericInstruction.Unary, rhs: NumericInstruction.Unary) 
     case (.nearest(let lhs), .nearest(let rhs)):
         return lhs == rhs
     case (.sqrt(let lhs), .sqrt(let rhs)):
-        return lhs == rhs
-    case (.eqz(let lhs), .eqz(let rhs)):
         return lhs == rhs
     default: return false
     }

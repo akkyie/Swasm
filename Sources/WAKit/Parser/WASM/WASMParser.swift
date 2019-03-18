@@ -499,7 +499,7 @@ extension WASMParser {
         case 0x70:
             return NumericInstruction.Binary.remU(I32.self)
         case 0x71:
-            return NumericInstruction.Binary.add(I32.self)
+            return NumericInstruction.Binary.and(I32.self)
         case 0x72:
             return NumericInstruction.Binary.or(I32.self)
         case 0x73:
@@ -536,7 +536,7 @@ extension WASMParser {
         case 0x82:
             return NumericInstruction.Binary.remU(I64.self)
         case 0x83:
-            return NumericInstruction.Binary.add(I64.self)
+            return NumericInstruction.Binary.and(I64.self)
         case 0x84:
             return NumericInstruction.Binary.or(I64.self)
         case 0x85:

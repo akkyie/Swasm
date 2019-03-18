@@ -1,5 +1,7 @@
 /// - Note:
 /// <https://webassembly.github.io/spec/core/syntax/types.html#value-types>
+
+public typealias ValueType = Value.Type
 public class Value: Equatable, Hashable {
     public static func == (lhs: Value, rhs: Value) -> Bool {
         return lhs.hashValue == rhs.hashValue
@@ -14,11 +16,69 @@ public class Value: Equatable, Hashable {
     }
 }
 
-public typealias ValueType = Value.Type
+public protocol RawRepresentableValue where Self: Value {
+    associatedtype RawValue
+
+    var rawValue: RawValue { get }
+
+    init(_ rawValue: RawValue)
+}
 
 // Integers
 /// - Note:
 /// <https://webassembly.github.io/spec/core/syntax/values.html#integers>
+
+public typealias IntValueType = IntValue.Type
+public class IntValue: Value {
+    required init() {
+        super.init()
+        precondition(type(of: self) != IntValue.self, "Subclasses of IntValue have to be used")
+    }
+
+    public override func hash(into _: inout Hasher) {
+        preconditionFailure("Subclasses of IntValue must override `hash(into:)`")
+    }
+}
+
+public final class I32: IntValue, RawRepresentableValue, CustomStringConvertible {
+    public let rawValue: UInt32
+
+    required init() {
+        rawValue = 0
+    }
+
+    public init(_ rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+
+    public var description: String {
+        return "\(type(of: self))(\(rawValue))"
+    }
+
+    public override func hash(into hasher: inout Hasher) {
+        rawValue.hash(into: &hasher)
+    }
+}
+
+public final class I64: IntValue, RawRepresentableValue, CustomStringConvertible {
+    public let rawValue: UInt64
+
+    required init() {
+        rawValue = 0
+    }
+
+    public init(_ rawValue: UInt64) {
+        self.rawValue = rawValue
+    }
+
+    public var description: String {
+        return "\(type(of: self))(\(rawValue))"
+    }
+
+    public override func hash(into hasher: inout Hasher) {
+        rawValue.hash(into: &hasher)
+    }
+}
 
 public protocol RawUnsignedInteger: FixedWidthInteger & UnsignedInteger {
     associatedtype Signed: RawSignedInteger where Signed.Unsigned == Self
@@ -52,100 +112,6 @@ extension RawSignedInteger {
     }
 }
 
-// Floating-Point
-/// - Note:
-/// <https://webassembly.github.io/spec/core/syntax/values.html#floating-point>
-
-typealias RawFloatingPoint = BinaryFloatingPoint
-
-public protocol RawRepresentableValue where Self: Value {
-    associatedtype RawValue
-
-    var rawValue: RawValue { get }
-
-    init(_ rawValue: RawValue)
-}
-
-public final class I32: Value, RawRepresentableValue, CustomStringConvertible {
-    public let rawValue: UInt32
-
-    required init() {
-        rawValue = 0
-    }
-
-    public init(_ rawValue: UInt32) {
-        self.rawValue = rawValue
-    }
-
-    public var description: String {
-        return "\(type(of: self))(\(rawValue))"
-    }
-
-    public override func hash(into hasher: inout Hasher) {
-        rawValue.hash(into: &hasher)
-    }
-}
-
-public final class I64: Value, RawRepresentableValue, CustomStringConvertible {
-    public let rawValue: UInt64
-
-    required init() {
-        rawValue = 0
-    }
-
-    public init(_ rawValue: UInt64) {
-        self.rawValue = rawValue
-    }
-
-    public var description: String {
-        return "\(type(of: self))(\(rawValue))"
-    }
-
-    public override func hash(into hasher: inout Hasher) {
-        rawValue.hash(into: &hasher)
-    }
-}
-
-public final class F32: Value, RawRepresentableValue, CustomStringConvertible {
-    public let rawValue: Float32
-
-    required init() {
-        rawValue = 0
-    }
-
-    public init(_ rawValue: Float32) {
-        self.rawValue = rawValue
-    }
-
-    public var description: String {
-        return "\(type(of: self))(\(rawValue))"
-    }
-
-    public override func hash(into hasher: inout Hasher) {
-        rawValue.hash(into: &hasher)
-    }
-}
-
-public final class F64: Value, RawRepresentableValue, CustomStringConvertible {
-    public let rawValue: Float64
-
-    required init() {
-        rawValue = 0
-    }
-
-    public init(_ rawValue: Float64) {
-        self.rawValue = rawValue
-    }
-
-    public var description: String {
-        return "\(type(of: self))(\(rawValue))"
-    }
-
-    public override func hash(into hasher: inout Hasher) {
-        rawValue.hash(into: &hasher)
-    }
-}
-
 extension RawRepresentableValue where Self: Value, RawValue: RawUnsignedInteger {
     var signed: RawValue.Signed {
         return rawValue.signed
@@ -170,12 +136,86 @@ extension RawRepresentableValue where Self: Value, RawValue: RawUnsignedInteger 
     }
 }
 
+// Floating-Point
+/// - Note:
+/// <https://webassembly.github.io/spec/core/syntax/values.html#floating-point>
+
+public typealias FloatValueType = FloatValue.Type
+public class FloatValue: Value {
+    required init() {
+        super.init()
+        precondition(type(of: self) != IntValue.self, "Subclasses of FloatValue have to be used")
+    }
+
+    public override func hash(into _: inout Hasher) {
+        preconditionFailure("Subclasses of FloatValue must override `hash(into:)`")
+    }
+}
+
+public typealias RawFloatingPoint = BinaryFloatingPoint
+
+public final class F32: FloatValue, RawRepresentableValue, CustomStringConvertible {
+    public let rawValue: Float32
+
+    required init() {
+        rawValue = 0
+    }
+
+    public init(_ rawValue: Float32) {
+        self.rawValue = rawValue
+    }
+
+    public var description: String {
+        return "\(type(of: self))(\(rawValue))"
+    }
+
+    public override func hash(into hasher: inout Hasher) {
+        rawValue.hash(into: &hasher)
+    }
+}
+
+public final class F64: FloatValue, RawRepresentableValue, CustomStringConvertible {
+    public let rawValue: Float64
+
+    required init() {
+        rawValue = 0
+    }
+
+    public init(_ rawValue: Float64) {
+        self.rawValue = rawValue
+    }
+
+    public var description: String {
+        return "\(type(of: self))(\(rawValue))"
+    }
+
+    public override func hash(into hasher: inout Hasher) {
+        rawValue.hash(into: &hasher)
+    }
+}
+
+extension RawRepresentableValue where Self: Value, RawValue: RawFloatingPoint {
+    public static func == (lhs: Self, rhs: RawValue) -> Bool {
+        return lhs.rawValue == rhs
+    }
+
+    public static func != (lhs: Self, rhs: RawValue) -> Bool {
+        return lhs.rawValue != rhs
+    }
+}
+
 protocol ByteConvertible {
     static var bitWidth: Int { get }
 
     init<T: Sequence>(_ bytes: T) where T.Element == UInt8
 
     func bytes() -> [UInt8]
+}
+
+extension ByteConvertible where Self: RawRepresentableValue, Self.RawValue: FixedWidthInteger {
+    static var bitWidth: Int {
+        return RawValue.bitWidth
+    }
 }
 
 extension FixedWidthInteger {
@@ -200,8 +240,6 @@ extension FixedWidthInteger {
 }
 
 extension I32: ByteConvertible {
-    static var bitWidth: Int { return 32 }
-
     convenience init<T: Sequence>(_ bytes: T) where T.Element == UInt8 {
         self.init(RawValue(littleEndian: bytes))
     }
@@ -212,8 +250,6 @@ extension I32: ByteConvertible {
 }
 
 extension I64: ByteConvertible {
-    static var bitWidth: Int { return 64 }
-
     convenience init<T: Sequence>(_ bytes: T) where T.Element == UInt8 {
         self.init(RawValue(littleEndian: bytes))
     }
@@ -257,5 +293,15 @@ extension Array where Element == ValueType {
 
     static func != (lhs: [ValueType], rhs: [ValueType]) -> Bool {
         return !(lhs == rhs)
+    }
+}
+
+extension FixedWidthInteger {
+    func rotl(_ l: Self) -> Self {
+        return self << l | self >> (Self(Self.bitWidth) - l)
+    }
+
+    func rotr(_ r: Self) -> Self {
+        return self >> r | self << (Self(Self.bitWidth) - r)
     }
 }

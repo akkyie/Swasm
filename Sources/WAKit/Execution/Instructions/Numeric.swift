@@ -31,7 +31,7 @@ extension Runtime {
         case let value as F64:
             result = try operate(F64.self, instruction, value)
         default:
-            throw Trap.unimplemented("\(instruction)")
+            throw Trap.invalidTypeForInstruction(instruction.type, instruction)
         }
 
         stack.push(result)
@@ -52,7 +52,7 @@ extension Runtime {
         case let (value1, value2) as (F64, F64):
             result = try operate(F64.self, instruction, value1, value2)
         default:
-            throw Trap.unimplemented("\(instruction)")
+            throw Trap.invalidTypeForInstruction(instruction.type, instruction)
         }
 
         stack.push(result)
@@ -73,7 +73,7 @@ extension Runtime {
         case let value as F64:
             result = try operate(F64.self, type2, instruction, value)
         default:
-            throw Trap.unimplemented("\(instruction)")
+            throw Trap.invalidTypeForInstruction(instruction.types.0, instruction)
         }
 
         stack.push(result)
@@ -82,105 +82,172 @@ extension Runtime {
 
 extension Runtime {
     fileprivate func operate<V: RawRepresentableValue>(
-        _: V.Type,
+        _ type: V.Type,
         _ instruction: NumericInstruction.Unary,
-        _: V
+        _ value: V
     ) throws -> Value where V.RawValue: RawUnsignedInteger {
-        throw Trap.unimplemented("\(instruction)")
+        switch instruction {
+        case .clz:
+            return V(V.RawValue(value.rawValue.leadingZeroBitCount))
+        case .ctz:
+            return V(V.RawValue(value.rawValue.trailingZeroBitCount))
+        case .popcnt:
+            return V(V.RawValue(value.rawValue.nonzeroBitCount))
+
+        case .eqz:
+            return value.rawValue == 0 ? I32(1) : I32(0)
+        default: throw Trap.invalidTypeForInstruction(type, instruction)
+        }
     }
 
     fileprivate func operate<V: RawRepresentableValue>(
-        _: V.Type,
+        _ type: V.Type,
         _ instruction: NumericInstruction.Unary,
-        _: V
+        _ value: V
     ) throws -> Value where V.RawValue: RawFloatingPoint {
-        throw Trap.unimplemented("\(instruction)")
+        let result: V.RawValue
+        switch instruction {
+        case .abs:
+            result = abs(value.rawValue)
+        case .neg:
+            result = -value.rawValue
+        case .ceil:
+            result = abs(value.rawValue.nextUp)
+        case .floor:
+            result = abs(value.rawValue.nextDown)
+        case .trunc:
+            result = abs(value.rawValue.rounded(.towardZero))
+        case .nearest:
+            result = abs(value.rawValue.rounded(.toNearestOrEven))
+        case .sqrt:
+            result = value.rawValue.squareRoot()
+
+        default: throw Trap.invalidTypeForInstruction(type, instruction)
+        }
+        return V(result)
     }
 }
 
 extension Runtime {
     fileprivate func operate<V: RawRepresentableValue>(
-        _: V.Type,
+        _ type: V.Type,
         _ instruction: NumericInstruction.Binary,
         _ value1: V, _ value2: V
     ) throws -> Value where V.RawValue: RawUnsignedInteger {
         switch instruction {
         case .add:
-            let (result, _) = value1.rawValue.addingReportingOverflow(value2.rawValue)
-            return V(V.RawValue(result))
+            return V(value1.rawValue &+ value2.rawValue)
         case .sub:
-            throw Trap.unimplemented("\(instruction)")
+            return V(value1.rawValue &- value2.rawValue)
         case .mul:
-            throw Trap.unimplemented("\(instruction)")
-        case .divS:
-            throw Trap.unimplemented("\(instruction)")
-        case .divU:
-            throw Trap.unimplemented("\(instruction)")
-        case .remS:
-            throw Trap.unimplemented("\(instruction)")
-        case .remU:
-            throw Trap.unimplemented("\(instruction)")
-        case .and:
-            throw Trap.unimplemented("\(instruction)")
-        case .or:
-            throw Trap.unimplemented("\(instruction)")
-        case .xor:
-            throw Trap.unimplemented("\(instruction)")
-        case .shl:
-            throw Trap.unimplemented("\(instruction)")
-        case .shrS:
-            throw Trap.unimplemented("\(instruction)")
-        case .shrU:
-            throw Trap.unimplemented("\(instruction)")
-        case .rotl:
-            throw Trap.unimplemented("\(instruction)")
-        case .rotr:
-            throw Trap.unimplemented("\(instruction)")
-        case .div:
-            throw Trap.unimplemented("\(instruction)")
-        case .min:
-            throw Trap.unimplemented("\(instruction)")
-        case .max:
-            throw Trap.unimplemented("\(instruction)")
-        case .copysign:
-            throw Trap.unimplemented("\(instruction)")
+            return V(value1.rawValue &* value2.rawValue)
+
         case .eq:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue == value2.rawValue ? I32(1) : I32(0)
         case .ne:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue != value2.rawValue ? I32(1) : I32(0)
+
+        case .divS:
+            guard value2 != 0 else { throw Trap.integerDividedByZero }
+            let (signed, overflow) = value1.signed.dividedReportingOverflow(by: value2.signed)
+            guard !overflow else { throw Trap.integerOverflowed }
+            return V(signed.unsigned)
+        case .divU:
+            guard value2 != 0 else { throw Trap.integerDividedByZero }
+            let (result, overflow) = value1.rawValue.dividedReportingOverflow(by: value2.rawValue)
+            guard !overflow else { throw Trap.integerOverflowed }
+            return V(result)
+        case .remS:
+            guard value2 != 0 else { throw Trap.integerDividedByZero }
+            let (signed, overflow) = value1.signed.remainderReportingOverflow(dividingBy: value2.signed)
+            guard !overflow else { throw Trap.integerOverflowed }
+            return V(signed.unsigned)
+        case .remU:
+            guard value2 != 0 else { throw Trap.integerDividedByZero }
+            let (result, overflow) = value1.rawValue.remainderReportingOverflow(dividingBy: value2.rawValue)
+            guard !overflow else { throw Trap.integerOverflowed }
+            return V(result)
+        case .and:
+            return V(value1.rawValue & value2.rawValue)
+        case .or:
+            return V(value1.rawValue | value2.rawValue)
+        case .xor:
+            return V(value1.rawValue ^ value2.rawValue)
+        case .shl:
+            let shift = value2.rawValue % V.RawValue(V.RawValue.bitWidth)
+            return V(value1.rawValue << shift)
+        case .shrS:
+            let shift = value2.signed % V.RawValue.Signed(V.RawValue.Signed.bitWidth)
+            return V((value1.signed >> shift).unsigned)
+        case .shrU:
+            let shift = value2.rawValue % V.RawValue(V.RawValue.bitWidth)
+            return V(value1.rawValue >> shift)
+        case .rotl:
+            let shift = value2.rawValue % V.RawValue(V.RawValue.bitWidth)
+            return V(value1.rawValue.rotl(shift))
+        case .rotr:
+            let shift = value2.rawValue % V.RawValue(V.RawValue.bitWidth)
+            return V(value1.rawValue.rotr(shift))
+
         case .ltS:
-            return I32(value1.signed < value2.signed ? 1 : 0)
+            return value1.signed < value2.signed ? I32(1) : I32(0)
         case .ltU:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue < value2.rawValue ? I32(1) : I32(0)
         case .gtS:
-            return I32(value1.signed > value2.signed ? 1 : 0)
+            return value1.signed > value2.signed ? I32(1) : I32(0)
         case .gtU:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue > value2.rawValue ? I32(1) : I32(0)
         case .leS:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.signed <= value2.signed ? I32(1) : I32(0)
         case .leU:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue <= value2.rawValue ? I32(1) : I32(0)
         case .geS:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.signed >= value2.signed ? I32(1) : I32(0)
         case .geU:
-            throw Trap.unimplemented("\(instruction)")
-        case .lt:
-            throw Trap.unimplemented("\(instruction)")
-        case .gt:
-            throw Trap.unimplemented("\(instruction)")
-        case .le:
-            throw Trap.unimplemented("\(instruction)")
-        case .ge:
-            throw Trap.unimplemented("\(instruction)")
+            return value1.rawValue >= value2.rawValue ? I32(1) : I32(0)
+
+        default: throw Trap.invalidTypeForInstruction(type, instruction)
         }
     }
 
     fileprivate func operate<V: RawRepresentableValue>(
-        _: V.Type,
+        _ type: V.Type,
         _ instruction: NumericInstruction.Binary,
-        _: V, _: V
+        _ value1: V, _ value2: V
     ) throws -> Value where V.RawValue: RawFloatingPoint {
-        throw Trap.unimplemented("\(instruction)")
+        switch instruction {
+        case .add:
+            return V(value1.rawValue + value2.rawValue)
+        case .sub:
+            return V(value1.rawValue - value2.rawValue)
+        case .mul:
+            return V(value1.rawValue * value2.rawValue)
+
+        case .eq:
+            return value1.rawValue == value2.rawValue ? I32(1) : I32(0)
+        case .ne:
+            return value1.rawValue == value2.rawValue ? I32(0) : I32(1)
+
+        case .div:
+            guard value2 != 0 else { throw Trap.integerDividedByZero }
+            return V(value1.rawValue / value2.rawValue)
+        case .min:
+            return V(min(value1.rawValue, value2.rawValue))
+        case .max:
+            return V(max(value1.rawValue, value2.rawValue))
+        case .copysign:
+            return V(value1.rawValue.sign == value2.rawValue.sign ? value1.rawValue : -value1.rawValue)
+        case .lt:
+            return value1.rawValue < value2.rawValue ? I32(1) : I32(0)
+        case .gt:
+            return value1.rawValue > value2.rawValue ? I32(1) : I32(0)
+        case .le:
+            return value1.rawValue <= value2.rawValue ? I32(1) : I32(0)
+        case .ge:
+            return value1.rawValue >= value2.rawValue ? I32(1) : I32(0)
+
+        default: throw Trap.invalidTypeForInstruction(type, instruction)
+        }
     }
 }
 

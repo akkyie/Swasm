@@ -108,33 +108,38 @@ enum NumericInstruction {
 
     // sourcery: AutoEquatable
     enum Unary: Instruction {
-        case clz(ValueType)
-        case ctz(ValueType)
-        case popcnt(ValueType)
+        // iunop
+        case clz(IntValueType)
+        case ctz(IntValueType)
+        case popcnt(IntValueType)
 
-        case abs(ValueType)
-        case neg(ValueType)
-        case ceil(ValueType)
-        case floor(ValueType)
-        case trunc(ValueType)
-        case nearest(ValueType)
-        case sqrt(ValueType)
+        /// itestop
+        case eqz(IntValueType)
 
-        case eqz(ValueType)
+        // funop
+        case abs(FloatValueType)
+        case neg(FloatValueType)
+        case ceil(FloatValueType)
+        case floor(FloatValueType)
+        case trunc(FloatValueType)
+        case nearest(FloatValueType)
+        case sqrt(FloatValueType)
 
         var type: ValueType {
             switch self {
             case let .clz(type),
                  let .ctz(type),
                  let .popcnt(type),
-                 let .abs(type),
+                 let .eqz(type):
+                return type
+
+            case let .abs(type),
                  let .neg(type),
                  let .ceil(type),
                  let .floor(type),
                  let .trunc(type),
                  let .nearest(type),
-                 let .sqrt(type),
-                 let .eqz(type):
+                 let .sqrt(type):
                 return type
             }
         }
@@ -142,51 +147,60 @@ enum NumericInstruction {
 
     // sourcery: AutoEquatable
     enum Binary: Instruction {
+        // binop
         case add(ValueType)
         case sub(ValueType)
         case mul(ValueType)
 
-        case divS(ValueType)
-        case divU(ValueType)
-        case remS(ValueType)
-        case remU(ValueType)
-        case and(ValueType)
-        case or(ValueType)
-        case xor(ValueType)
-        case shl(ValueType)
-        case shrS(ValueType)
-        case shrU(ValueType)
-        case rotl(ValueType)
-        case rotr(ValueType)
-
-        case div(ValueType)
-        case min(ValueType)
-        case max(ValueType)
-        case copysign(ValueType)
-
+        // relop
         case eq(ValueType)
         case ne(ValueType)
 
-        case ltS(ValueType)
-        case ltU(ValueType)
-        case gtS(ValueType)
-        case gtU(ValueType)
-        case leS(ValueType)
-        case leU(ValueType)
-        case geS(ValueType)
-        case geU(ValueType)
+        // ibinop
+        case divS(IntValueType)
+        case divU(IntValueType)
+        case remS(IntValueType)
+        case remU(IntValueType)
+        case and(IntValueType)
+        case or(IntValueType)
+        case xor(IntValueType)
+        case shl(IntValueType)
+        case shrS(IntValueType)
+        case shrU(IntValueType)
+        case rotl(IntValueType)
+        case rotr(IntValueType)
 
-        case lt(ValueType)
-        case gt(ValueType)
-        case le(ValueType)
-        case ge(ValueType)
+        // irelop
+        case ltS(IntValueType)
+        case ltU(IntValueType)
+        case gtS(IntValueType)
+        case gtU(IntValueType)
+        case leS(IntValueType)
+        case leU(IntValueType)
+        case geS(IntValueType)
+        case geU(IntValueType)
+
+        // fbinop
+        case div(FloatValueType)
+        case min(FloatValueType)
+        case max(FloatValueType)
+        case copysign(FloatValueType)
+
+        // frelop
+        case lt(FloatValueType)
+        case gt(FloatValueType)
+        case le(FloatValueType)
+        case ge(FloatValueType)
 
         var type: ValueType {
             switch self {
             case let .add(type),
                  let .sub(type),
                  let .mul(type),
-                 let .divS(type),
+                 let .eq(type),
+                 let .ne(type):
+                return type
+            case let .divS(type),
                  let .divU(type),
                  let .remS(type),
                  let .remU(type),
@@ -198,12 +212,6 @@ enum NumericInstruction {
                  let .shrU(type),
                  let .rotl(type),
                  let .rotr(type),
-                 let .div(type),
-                 let .min(type),
-                 let .max(type),
-                 let .copysign(type),
-                 let .eq(type),
-                 let .ne(type),
                  let .ltS(type),
                  let .ltU(type),
                  let .gtS(type),
@@ -211,7 +219,12 @@ enum NumericInstruction {
                  let .leS(type),
                  let .leU(type),
                  let .geS(type),
-                 let .geU(type),
+                 let .geU(type):
+                return type
+            case let .div(type),
+                 let .min(type),
+                 let .max(type),
+                 let .copysign(type),
                  let .lt(type),
                  let .gt(type),
                  let .le(type),
@@ -223,29 +236,38 @@ enum NumericInstruction {
 
     // sourcery: AutoEquatable
     enum Conversion: Instruction {
-        case wrap(ValueType, ValueType)
-        case extendS(ValueType, ValueType)
-        case extendU(ValueType, ValueType)
-        case truncS(ValueType, ValueType)
-        case truncU(ValueType, ValueType)
-        case convertS(ValueType, ValueType)
-        case convertU(ValueType, ValueType)
-        case demote(ValueType, ValueType)
-        case promote(ValueType, ValueType)
+        case wrap(I32.Type, I64.Type)
+        case extendS(I64.Type, I32.Type)
+        case extendU(I64.Type, I32.Type)
+        case truncS(IntValueType, FloatValueType)
+        case truncU(IntValueType, FloatValueType)
+        case convertS(FloatValueType, IntValueType)
+        case convertU(FloatValueType, IntValueType)
+        case demote(F32.Type, F64.Type)
+        case promote(F64.Type, F32.Type)
         case reinterpret(ValueType, ValueType)
 
         var types: (ValueType, ValueType) {
             switch self {
-            case let .wrap(type1, type2),
-                 let .extendS(type1, type2),
-                 let .extendU(type1, type2),
-                 let .truncS(type1, type2),
-                 let .truncU(type1, type2),
-                 let .convertS(type1, type2),
-                 let .convertU(type1, type2),
-                 let .demote(type1, type2),
-                 let .promote(type1, type2),
-                 let .reinterpret(type1, type2):
+            case let .wrap(type1, type2):
+                return (type1, type2)
+            case let .extendS(type1, type2):
+                return (type1, type2)
+            case let .extendU(type1, type2):
+                return (type1, type2)
+            case let .truncS(type1, type2):
+                return (type1, type2)
+            case let .truncU(type1, type2):
+                return (type1, type2)
+            case let .convertS(type1, type2):
+                return (type1, type2)
+            case let .convertU(type1, type2):
+                return (type1, type2)
+            case let .demote(type1, type2):
+                return (type1, type2)
+            case let .promote(type1, type2):
+                return (type1, type2)
+            case let .reinterpret(type1, type2):
                 return (type1, type2)
             }
         }
